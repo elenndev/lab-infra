@@ -11,3 +11,8 @@ services:
     image: hashicorp/http-echo:1.0.0
     command: ["-text=Backend working"]
 
+  frontend:
+    image: nginx:alpine
+    volumes:
+      - ./docker/frontend/html:/usr/share/nginx/html:ro
+
