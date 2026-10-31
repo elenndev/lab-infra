@@ -1,0 +1,13 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: lab-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+  backend:
+    image: hashicorp/http-echo:1.0.0
+    command: ["-text=Backend working"]
+
