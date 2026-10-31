@@ -81,6 +81,23 @@ services:
           sleep "$$BACKUP_INTERVAL_SECONDS";
         done
       '
+  cleanup:
+    image: alpine:3.22
+    container_name: lab-backup-cleanup
+    restart: unless-stopped
+    environment:
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+      CLEANUP_INTERVAL_SECONDS: ${CLEANUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - ./scripts/cleanup-backups.sh:/scripts/cleanup-backups.sh:ro
+      - ./backups:/backups
+    command: >
+      sh -c '
+        while true; do
+          sh /scripts/cleanup-backups.sh;
+          sleep "$${CLEANUP_INTERVAL_SECONDS:-86400}";
+        done
+      '
 
 volumes:
   postgres_data:
