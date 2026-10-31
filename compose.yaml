@@ -57,6 +57,31 @@ services:
       retries: 5
       start_period: 10s
 
+  backup:
+    image: postgres:17-alpine
+    container_name: lab-backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - ./scripts/backup.sh:/scripts/backup.sh:ro
+      - ./backups:/backups
+    command: >
+      sh -c '
+        while true; do
+          sh /scripts/backup.sh || echo "Backup failed. Will retry later.";
+          sleep "$$BACKUP_INTERVAL_SECONDS";
+        done
+      '
+
 volumes:
   postgres_data:
 
