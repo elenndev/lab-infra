@@ -16,3 +16,16 @@ services:
     volumes:
       - ./docker/frontend/html:/usr/share/nginx/html:ro
 
+  postgres:
+    image: postgres:17-alpine
+    container_name: lab-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+
