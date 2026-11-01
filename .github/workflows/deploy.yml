@@ -8,6 +8,9 @@ on:
         require: true
         type: string
 
+  repository_dispatch:
+    types: [backend-image-published]
+
 jobs:
   deploy:
     runs-on: self-hosted
@@ -16,11 +19,20 @@ jobs:
       - name: Deploy backend
         env:
           LAB_INFRA_DIR: ${{ vars.LAB_INFRA_DIR }}
-          IMAGE: ${{ inputs.image }}
+          # allow auto and manual event
+          IMAGE: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.image || inputs.image }}
         run: |
+          if [ -z "$IMAGE" ]; then
+            echo "No Docker image provided."
+            exit 1
+          fi
+
           if [ ! -d "$LAB_INFRA_DIR" ]; then
             echo "Infrastructure directory not found: $LAB_INFRA_DIR"
             exit 1
           fi
+
           cd "$LAB_INFRA_DIR"
           ./scripts/deploy.sh "$IMAGE"
+
+
