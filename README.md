@@ -30,6 +30,7 @@ O projeto está organizado em dois repositórios principais:
 | `lab-infra` | Orquestração dos containers, configuração do Nginx, deploy, rollback e backups. |
 
 O frontend é uma aplicação HTML estática, mantida diretamente no repositório de infraestrutura e servida por um container Nginx.
+Acessar o Repo do backend em: [lab-backend](https://github.com/elenndev/lab-backend)
 
 ### Fluxo de CI/CD
 
