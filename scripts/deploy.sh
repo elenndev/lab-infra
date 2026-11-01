@@ -8,6 +8,25 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "$PROJECT_DIR"
 
+# log configuration ---------------------
+LOG_DIR="$PROJECT_DIR/logs"
+LOG_FILE="$LOG_DIR/deploy.log"
+
+mkdir -p "$LOG_DIR"
+
+log_event() {
+    local event="$1"
+    local details="$2"
+
+    printf '%s | %-10s | %s\n' \
+        "$(date '+%Y-%m-%d %H:%M:%S')" \
+        "$event" \
+        "$details" \
+        | tee -a "$LOG_FILE"
+}
+
+# deploy configuration -----------------
+
 CONTAINER="lab-backend"
 MAX_ATTEMPTS=30
 SLEEP_SECONDS=2
@@ -23,6 +42,9 @@ if docker inspect "$CONTAINER" >/dev/null 2>&1; then
     PREVIOUS_IMAGE=$(docker inspect \
         --format '{{.Config.Image}}' \
         "$CONTAINER")
+
+    log_event "STARTED" \
+      "NEW=$IMAGE PREVIOUS=${PREVIOUS_IMAGE:-NONE}"
 
     echo "Previous image: $PREVIOUS_IMAGE"
 else
@@ -87,10 +109,14 @@ rollback() {
     fi
 
     if wait_for_health; then
+        log_event "ROLLBACK" \
+          "RESTORED=$PREVIOUS_IMAGE STATUS=SUCCESS"
         echo "Rollback completed successfully!"
         return 0
     fi
 
+    log_event "ROLLBACK" \
+      "RESTORED=$PREVIOUS_IMAGE STATUS=FAILED"
     echo "ERROR: Previous version did not become healthy."
     docker compose logs --tail=50 backend
     return 1
@@ -102,6 +128,7 @@ echo "[1/3] Downloading image..."
 
 if ! docker compose pull backend; then
     echo "ERROR: Failed to download new image."
+    log_event "FAILED" "NEW=$IMAGE REASON=image_pull_failed"
     rollback || true
     exit 1
 fi
@@ -110,6 +137,7 @@ echo "[2/3] Updating container..."
 
 if ! docker compose up -d --no-deps backend; then
     echo "ERROR: Failed to update container."
+    log_event "FAILED" "NEW=$IMAGE REASON=container_update_failed"
     rollback || true
     exit 1
 fi
@@ -117,6 +145,7 @@ fi
 echo "[3/3] Waiting for health check..."
 
 if wait_for_health; then
+    log_event "SUCCESS" "ACTIVE=$IMAGE"
     echo "===================================="
     echo "Deployment completed successfully!"
     echo "Active image: $IMAGE"
@@ -125,6 +154,7 @@ if wait_for_health; then
 fi
 
 echo "ERROR: New deployment failed."
+log_event "FAILED" "NEW=$IMAGE REASON=health_check_failed"
 docker compose logs --tail=50 backend
 
 if rollback; then
